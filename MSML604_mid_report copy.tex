@@ -1,0 +1,89 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{graphicx}
+
+\begin{document}
+
+\title{Mid-Semester Report: Enhancing Earnings Pre-Announcement Alpha with Mean-Variance Optimization in the China A-Share Market\\
+{\footnotesize \textsuperscript{*}MSML604: Introduction to Optimization}}
+
+\author{
+\IEEEauthorblockN{Chenhongshu Yu}
+\IEEEauthorblockA{\textit{University of Maryland}\\
+Email: alfieyu@umd.edu}
+\and
+\IEEEauthorblockN{Yuliang Peng}
+\IEEEauthorblockA{\textit{University of Maryland}\\
+Email: ypeng12@umd.edu}
+}
+
+\maketitle
+
+\begin{abstract}
+This mid-semester report outlines the motivation and mathematical formulation of an optimization-based portfolio trading strategy in the China A-share market. We propose combining Machine Learning alpha generation --- specifically predicting Post-Earnings Announcement Drift (PEAD) on 'Pre-Increase' stocks using a Random Forest model --- with Mean-Variance Optimization (Quadratic Programming) based on the Modern Portfolio Theory. This approach mathematically maximizes expected machine learning returns while strictly controlling portfolio variance, aiming to yield a superior Sharpe Ratio compared to naive equal-weighting strategies.
+\end{abstract}
+
+\section{Description of the Problem}
+Developing a robust quantitative trading strategy in the China A-share market presents unique challenges due to the market's high retail investor participation (approximately 80\%), elevated volatility, and restricted short-selling mechanics. A known market inefficiency in this environment is Post-Earnings Announcement Drift (PEAD). When companies issue 'Pre-Increase' earnings pre-announcements, information is incorporated slowly into the stock price, creating an exploitable momentum anomaly.
+
+Given a daily prediction model (e.g., a Random Forest Regressor) that identifies the top 10 stocks likely to appreciate based on these announcements, the core problem becomes one of optimal capital allocation. Traditional baseline strategies apply a naive equal-weighting scheme (e.g., 10\% capital to each of the 10 selected stocks). However, this heuristic completely ignores the variance of individual stocks and the covariance between them. During sector shocks or broad market corrections, highly correlated growth stocks can suffer devastating synchronized drawdowns. The problem we formulate is how to optimally size positions among these model-selected stocks to systematically maximize risk-adjusted returns.
+
+\section{Motivation for Studying the Problem}
+Improving the Sharpe ratio and minimizing maximum drawdowns in the A-share market is a deeply relevant problem for quantitative researchers. While finding alpha (predictive edge) is the first step in algorithmic trading, proper portfolio construction is what dictates long-term survival. 
+
+By modeling this capital allocation challenge as a rigorous mathematical optimization problem, we can dynamically adjust our exposure based on the empirical covariance of asset returns and our predictive forward returns. This two-step systematic approach, using Machine Learning for expected returns and Convex Optimization for risk control, bridges predictive modeling with Modern Portfolio Theory. Completing this project will demonstrate the practical power of numerical optimization solvers (such as Sequential Least Squares Programming) \cite{boyd2004} in financial data science, providing hands-on experience in translating a real-world financial friction into a solvable framework.
+
+\section{Background: Modern Portfolio Theory and Machine Learning Alpha}
+The theoretical foundation of our optimization framework is Modern Portfolio Theory (MPT), pioneered by Harry Markowitz \cite{markowitz1952}. The core insight of MPT is that an asset's risk and return should not be evaluated in isolation, but by how it contributes to a portfolio's overall variance. Because different financial assets often move independently, combining assets with low correlations reduces overall risk without sacrificing expected return.
+
+In classic MPT, expected returns are often derived from simple historical moving averages, which possess weak predictive power. Our strategy innovates on this baseline by replacing historical averages with the forward-looking predictions of a Random Forest machine learning model trained on event-driven growth metrics. Finding a portfolio on the MPT 'Efficient Frontier' using these model-generated returns is inherently a Quadratic Programming problem.
+
+\section{Mathematical Optimization Formulation}
+We formulate the daily portfolio allocation task as a continuous Quadratic Programming (QP) problem based on Mean-Variance Optimization. 
+
+\subsection{Optimization Variables and Parameters}
+\begin{itemize}
+    \item $\mathbf{w} \in \mathbb{R}^n$: The decision variable vector representing the capital weights allocated to each of the $n$ selected A-share stocks for the current trading day.
+    \item $\boldsymbol{\mu} \in \mathbb{R}^n$: The vector of expected future returns. \textit{Crucially, this is dynamically supplied by our Random Forest Regressor's return predictions for the specific stocks}.
+    \item $\mathbf{\Sigma} \in \mathbb{R}^{n \times n}$: The empirical covariance matrix of historical stock returns over a rolling lookback window, capturing risk and asset correlations.
+    \item $\lambda \ge 0$: A scalar risk-aversion penalty chosen by the investor. A higher $\lambda$ prioritizes variance minimization (risk control) over expected return maximization.
+\end{itemize}
+
+\subsection{Objective Function}
+We minimize the portfolio variance while maximizing the expected portfolio return (scaled by our risk appetite). The objective function is:
+\begin{equation}
+    \min_{\mathbf{w}} \quad f(\mathbf{w}) = \frac{1}{2} \mathbf{w}^T \mathbf{\Sigma} \mathbf{w} - \lambda \boldsymbol{\mu}^T \mathbf{w}
+\end{equation}
+
+\subsection{Constraints}
+To ensure the portfolio is practically deployable in the China A-share market, we introduce the following constraints:
+
+\paragraph{Fully Invested (Budget) Constraint} 
+The sum of all portfolio weights must equal 100\%. 
+\begin{equation}
+    \sum_{i=1}^n w_i = 1 \quad (\text{or } \mathbf{1}^T \mathbf{w} = 1)
+\end{equation}
+
+\paragraph{Long-Only Constraint}
+Because short selling is heavily restricted and often impractical in the standard China A-share market, we restrict all asset weights to be non-negative.
+\begin{equation}
+    w_i \ge 0 \quad \text{for all } i=1, \dots, n
+\end{equation}
+
+\paragraph{Maximum Position Limit Constraint}
+To prevent severe concentration risk in a single volatile stock, we enforce an upper bound on a single asset's weight. $W_{max}$ is a predefined constant, such as 0.20 (20\% maximum allocation per stock).
+\begin{equation}
+    w_i \le W_{max} \quad \text{for all } i=1, \dots, n
+\end{equation}
+
+\begin{thebibliography}{00}
+
+\bibitem{markowitz1952}
+H.~Markowitz, ``Portfolio Selection,'' \textit{The Journal of Finance}, vol. 7, no. 1, pp. 77--91, 1952.
+
+\bibitem{boyd2004}
+S.~Boyd and L.~Vandenberghe, \textit{Convex Optimization}. Cambridge, U.K.: Cambridge University Press, 2004.
+
+\end{thebibliography}
+
+\end{document}
